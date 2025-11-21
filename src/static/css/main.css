@@ -1,0 +1,46 @@
+.add_task, .todo_list{
+	display: flex;
+	align-items: center;
+    justify-content: center;
+}
+.add_task > button {
+  background-color: #007ACC;
+  outline: 1px #007ACC solid;
+  outline-offset: -3px;
+  border-radius: 3px;
+  border: none;
+  cursor: pointer;
+  padding: .8em 4em;
+}
+
+.add_task > button .text {
+  color: white;
+  font-size: 1.1em;
+  font-weight: 700;
+}
+
+.add_task > button:hover {
+  background-color: #007ACC;
+  opacity: 0.6;
+}
+
+.add_task > button:hover .text {
+  color: #FFF;
+}
+
+.add_task > input {
+    border-radius: 3px;
+    border: 1px #007ACC solid;
+	margin: 1em;
+	padding: .8em;
+	font-size: 1em;
+}
+
+.p {
+    position: relative;
+    float: left;
+}
+
+main {
+    min-width: 50em;
+}

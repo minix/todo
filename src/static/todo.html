@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="zh-hans">
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  <meta content="width=device-width, initial-scale=1, shrink-to-fit=no" name="viewport">
+  <title>Todo</title>
+  <link rel="stylesheet" href="/css/main.css" crossorigin="">
+  <link rel="stylesheet" href="/css/reset.css" crossorigin="">
+  <script src="/js/htmx.js"></script>
+</head>
+<body>
+<main>
+<div class="add_task">
+    <input type="text" id="todo" name="input1" size="40" placeholder="请输入将要做的事" />
+    <button hx-post="/add-checkbox" hx-target="#checkbox-list" hx-swap="beforeend"><p class="text">Add</p></button>
+</div>
+<div class="todo_list">
+    <p class="p">以下todo列表</p>
+    <br />
+    <div id="checkbox-list">
+    <!--#content-->
+    </div>
+</div>
+</main>
+</body>
+</html>
