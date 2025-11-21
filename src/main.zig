@@ -17,6 +17,8 @@ const Form = http.Form;
 
 const Compression = http.Middlewares.Compression;
 
+const todo_json_file: []const u8 = "todo.json";
+
 const TodoList = struct {
     id: usize = 0,
     todo: []const u8,
@@ -32,17 +34,7 @@ const TodoList = struct {
 };
 
 fn base_handler(ctx: *const Context, _: void) !Respond {
-//    const body =
-//        \\ <!DOCTYPE html>
-//        \\ <html>
-//        \\ <body>
-//        \\ <h1>Hello, World!</h1>
-//        \\ </body>
-//        \\ </html>
-//    ;
-    
-    var buf: [1024]u8 = undefined;
-    const body = try Io.Dir.cwd().readFile(ctx.io, "src/static/index.html", &buf);
+    const body = try read_json(ctx.io, ctx.allocator, todo_json_file);
 
     return try ctx.response.apply(.{
         .status = .OK,
@@ -61,9 +53,7 @@ fn td(ctx: *const Context, _: void) !Respond {
         @embedFile("static/content.html"),
     );
 
-    var buf: [1024]u8 = undefined;
-    const todo_file: []const u8 = "todo.json";
-    const todo_list = try Io.Dir.cwd().readFile(ctx.io, todo_file, &buf);
+    const todo_list = try read_json(ctx.io, ctx.allocator, todo_json_file);
     const parsed_todo = try json.parseFromSlice([]TodoList, ctx.allocator, todo_list, .{});
     defer parsed_todo.deinit();
 
@@ -82,9 +72,7 @@ fn add_task(ctx: *const Context, _: void) !Respond {
         else => return error.UnexpectedMethod,
     };
     
-    var buf: [1024]u8 = undefined;
-    const todo_file: []const u8 = "todo.json";
-    const todo_list = try Io.Dir.cwd().readFile(ctx.io, todo_file, &buf);
+    const todo_list = try read_json(ctx.io, ctx.allocator, todo_json_file);
 
     var list = std.array_list.Managed(TodoList).init(ctx.allocator);
     defer list.deinit();
@@ -99,7 +87,7 @@ fn add_task(ctx: *const Context, _: void) !Respond {
     const append_ele = TodoList.init(element_id + 1, info.todo, info.status);
     try list.append(append_ele);
 
-    const new_js = try std.fs.cwd().createFile(todo_file, .{ .truncate = true });
+    const new_js = try std.fs.cwd().createFile(todo_json_file, .{ .truncate = true });
     defer new_js.close();
 
     const render = try json.Stringify.valueAlloc(ctx.allocator, list.items, .{});
@@ -118,6 +106,12 @@ fn add_task(ctx: *const Context, _: void) !Respond {
 //        .body = res.written(),
         .body = "Success",
     });
+}
+
+fn read_json(gg: std.Io, allocator: std.mem.Allocator, file_path: []const u8) ![]u8 {
+	const buf = try allocator.alloc(u8, 4096);
+	const content: []u8 = try std.Io.Dir.cwd().readFile(gg, file_path, buf);
+	return content;
 }
 
 fn shutdown(_: std.c.SIG) callconv(.c) void {
