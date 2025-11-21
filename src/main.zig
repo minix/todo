@@ -73,23 +73,74 @@ fn add_task(ctx: *const Context, _: void) !Respond {
     };
     
     const todo_list = try read_json(ctx.io, ctx.allocator, todo_json_file);
-    try write_json(todo_json_file, ctx.allocator, todo_list, info);
+    const body = try write_json(todo_json_file, ctx.allocator, todo_list, info);
 
     return ctx.response.apply(.{
         .status = .OK,
-        .mime = http.Mime.TEXT,
+        .mime = http.Mime.JSON,
 //        .body = res.written(),
-        .body = "Success",
+        .body = body,
+    });
+}
+
+fn change_task_status(ctx: *const Context, _: void) !Respond {
+    const info = switch (ctx.request.method.?) {
+        .POST => try Form(TodoList).parse(ctx.allocator, ctx),
+        else => return error.UnexpectedMethod,
+    };
+    
+    const todo_list = try read_json(ctx.io, ctx.allocator, todo_json_file);
+    
+    var list = std.array_list.Managed(TodoList).init(ctx.allocator);
+    defer list.deinit();
+    
+    const parsed = try json.parseFromSlice([]TodoList, ctx.allocator, todo_list, .{});
+    defer parsed.deinit();
+	
+    try list.appendSlice(parsed.value);
+
+    const list_items = list.items;
+    
+    for (list_items, 0..) |item, i| {
+        if (item.id == info.id) {
+            const completed_task: TodoList = .{
+    		.id = item.id,
+    		.status = true,
+    		.todo = item.todo,
+    	    };
+    	    _ = list.orderedRemove(i);
+    	    try list.append(completed_task);
+    	}
+    }
+	
+    const new_js = try std.fs.cwd().createFile(todo_json_file, .{ .truncate = true });
+    defer new_js.close();
+
+    const render = try json.Stringify.valueAlloc(ctx.allocator, list_items, .{});
+    defer ctx.allocator.free(render);
+
+    var write_buffer: [1024]u8 = undefined;
+    var wtr = new_js.writer(&write_buffer);
+
+    const writer_interface: *std.Io.Writer = &wtr.interface;
+    try writer_interface.writeAll(render);
+    try writer_interface.flush();
+	
+    return ctx.response.apply(.{
+        .status = .OK,
+        .mime = http.Mime.JSON,
+//            .body = res.written(),
+        .body = render,
     });
 }
 
 fn read_json(gg: std.Io, allocator: std.mem.Allocator, file_path: []const u8) ![]u8 {
-	const buf = try allocator.alloc(u8, 4096);
-	const content: []u8 = try std.Io.Dir.cwd().readFile(gg, file_path, buf);
-	return content;
+    const buf = try allocator.alloc(u8, 4096);
+    const content: []u8 = try std.Io.Dir.cwd().readFile(gg, file_path, buf);
+    return content;
 }
 
-fn write_json(file_path: []const u8, allocator: std.mem.Allocator, json_content: []u8, form_data: TodoList) !void {
+fn write_json(file_path: []const u8, allocator: std.mem.Allocator, json_content: []u8, form_data: TodoList) ![]u8 {
 
     var list = std.array_list.Managed(TodoList).init(allocator);
     defer list.deinit();
@@ -114,8 +165,10 @@ fn write_json(file_path: []const u8, allocator: std.mem.Allocator, json_content:
     var wtr = new_js.writer(&write_buffer);
 
     const writer_interface: *std.Io.Writer = &wtr.interface;
-    try writer_interface.writeAll(render);
-    try writer_interface.flush();
+    _ = try writer_interface.writeAll(render);
+    _ = try writer_interface.flush();
+    
+    return render;
 }
 
 fn shutdown(_: std.c.SIG) callconv(.c) void {
@@ -149,6 +202,7 @@ pub fn main() !void {
         Route.init("/").get({}, base_handler).layer(),
         Route.init("/todo").get({}, td).layer(),
         Route.init("/add").post({}, add_task).layer(),
+        Route.init("/change").post({}, change_task_status).layer(),
         FsDir.serve("/", &static_dir),
     }, .{});
     defer router.deinit(allocator);
