@@ -73,32 +73,7 @@ fn add_task(ctx: *const Context, _: void) !Respond {
     };
     
     const todo_list = try read_json(ctx.io, ctx.allocator, todo_json_file);
-
-    var list = std.array_list.Managed(TodoList).init(ctx.allocator);
-    defer list.deinit();
-
-    const parsed = try json.parseFromSlice([]TodoList, ctx.allocator, todo_list, .{});
-    defer parsed.deinit();
-
-    const parsed_value = parsed.value;
-    try list.appendSlice(parsed_value);
-
-    const element_id: usize = parsed_value.len;
-    const append_ele = TodoList.init(element_id + 1, info.todo, info.status);
-    try list.append(append_ele);
-
-    const new_js = try std.fs.cwd().createFile(todo_json_file, .{ .truncate = true });
-    defer new_js.close();
-
-    const render = try json.Stringify.valueAlloc(ctx.allocator, list.items, .{});
-    defer ctx.allocator.free(render);
-
-    var write_buffer: [1024]u8 = undefined;
-    var wtr = new_js.writer(&write_buffer);
-
-    const writer_interface: *std.Io.Writer = &wtr.interface;
-    try writer_interface.writeAll(render);
-    try writer_interface.flush();
+    try write_json(todo_json_file, ctx.allocator, todo_list, info);
 
     return ctx.response.apply(.{
         .status = .OK,
@@ -112,6 +87,35 @@ fn read_json(gg: std.Io, allocator: std.mem.Allocator, file_path: []const u8) ![
 	const buf = try allocator.alloc(u8, 4096);
 	const content: []u8 = try std.Io.Dir.cwd().readFile(gg, file_path, buf);
 	return content;
+}
+
+fn write_json(file_path: []const u8, allocator: std.mem.Allocator, json_content: []u8, form_data: TodoList) !void {
+
+    var list = std.array_list.Managed(TodoList).init(allocator);
+    defer list.deinit();
+
+    const parsed = try json.parseFromSlice([]TodoList, allocator, json_content, .{});
+    defer parsed.deinit();
+
+    const parsed_value = parsed.value;
+    try list.appendSlice(parsed_value);
+
+    const element_id: usize = parsed_value.len;
+    const append_ele = TodoList.init(element_id + 1, form_data.todo, form_data.status);
+    try list.append(append_ele);
+    
+    const new_js = try std.fs.cwd().createFile(file_path, .{ .truncate = true });
+    defer new_js.close();
+
+    const render = try json.Stringify.valueAlloc(allocator, list.items, .{});
+    defer allocator.free(render);
+
+    var write_buffer: [1024]u8 = undefined;
+    var wtr = new_js.writer(&write_buffer);
+
+    const writer_interface: *std.Io.Writer = &wtr.interface;
+    try writer_interface.writeAll(render);
+    try writer_interface.flush();
 }
 
 fn shutdown(_: std.c.SIG) callconv(.c) void {
