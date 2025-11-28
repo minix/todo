@@ -33,8 +33,8 @@
     // internet connectivity.
     .dependencies = .{
         .zzz = .{
-            .url = "git+https://github.com/philipmv/zzz.io#146dd877eb0fdf62e29673458396dd72e9e67ac7",
-            .hash = "zzz-0.0.1-YfaUF5BvAgAyzbpyscgPIhrRMFxZJZ4eDBBDavN8VtLt",
+            .url = "git+https://github.com/philipmv/zzz.io#75ab4c6e8180377668784e906994ea588b258c2b",
+            .hash = "zzz-0.0.1-YfaUFzJqAgCPSCc5-ZZZyJ0SK913F3YX5FfiU-uGM8YT",
         },
     },
     .paths = .{
