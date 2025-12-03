@@ -8,324 +8,66 @@
   <link rel="stylesheet" href="/css/main.css" crossorigin="">
   <link rel="stylesheet" href="/css/reset.css" crossorigin="">
   <script src="/js/htmx.js"></script>
-     <style>
-        :root {
-            --primary-color: #4a6fa5;
-            --secondary-color: #6b8cbc;
-            --success-color: #5cb85c;
-            --danger-color: #d9534f;
-            --light-color: #f8f9fa;
-            --dark-color: #343a40;
-            --border-radius: 2px;
-            --box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-        }
-        
-        .container {
-            max-width: 800px;
-            margin: 0 auto;
-            padding: 20px;
-        }
-        
-        header {
-            text-align: center;
-            margin-bottom: 30px;
-        }
-        
-        h1 {
-            color: var(--primary-color);
-            margin-bottom: 10px;
-        }
-        
-        .todo-form {
-            margin-bottom: 2em;
-        }
-        
-        .form-group {
-            display: flex;
-            gap: 10px;
-        }
-        
-        input[type="text"] {
-            flex: 1;
-            padding: 12px 15px;
-            border: 1px solid #ddd;
-            border-radius: var(--border-radius);
-            font-size: 1rem;
-            transition: border-color 0.3s;
-        }
-        
-        input[type="text"]:focus {
-            outline: none;
-            border-color: var(--primary-color);
-        }
-        
-        button {
-            background-color: var(--primary-color);
-            color: white;
-            border: none;
-            padding: 12px 20px;
-            border-radius: var(--border-radius);
-            cursor: pointer;
-            font-size: 1rem;
-            transition: background-color 0.3s;
-        }
-        
-        button:hover {
-            background-color: var(--secondary-color);
-        }
-        
-        .todo-list {
-            display: grid;
-        }
-        
-        .todo-item {
-            background-color: white;
-            padding: 15px 20px;
-            display: flex;
-            align-items: center;
-            gap: 15px;
-            transition: transform 0.2s, box-shadow 0.2s;
-        }
-        
-        .todo-item:hover {
-            transform: translateY(-2px);
-        }
-        
-        .todo-item.completed {
-            opacity: 0.7;
-            background-color: #f8f9fa;
-        }
-        
-        .todo-checkbox {
-            width: 20px;
-            height: 20px;
-            cursor: pointer;
-        }
-        
-        .todo-content {
-            flex: 1;
-        }
-        
-        .todo-text {
-            font-size: 1.1rem;
-            margin-bottom: 5px;
-        }
-        
-        .todo-text.completed {
-            text-decoration: line-through;
-            color: #888;
-        }
-        
-        .todo-actions {
-            display: flex;
-            gap: 10px;
-        }
-        
-        .btn-delete:hover {
-            background-color: #c9302c;
-        }
-        
-        .stats {
-            display: flex;
-            justify-content: space-between;
-            margin-top: 20px;
-            padding: 15px;
-            background-color: white;
-            border-radius: var(--border-radius);
-            box-shadow: var(--box-shadow);
-        }
-        
-        .stat-item {
-            text-align: center;
-        }
-        
-        .stat-value {
-            font-size: 1.5rem;
-            font-weight: bold;
-            color: var(--primary-color);
-        }
-        
-        .stat-label {
-            font-size: 0.9rem;
-            color: #666;
-        }
-        
-        @media (max-width: 600px) {
-            .form-group {
-                flex-direction: column;
-            }
-            
-            .todo-item {
-                flex-direction: column;
-                align-items: flex-start;
-            }
-            
-            .todo-actions {
-                align-self: flex-end;
-            }
-            
-            .stats {
-                flex-direction: column;
-                gap: 15px;
-            }
-        }
-    </style>
-</head>
+  
 <body>
-<main>
-    <div id="checkbox-list">
-    <!--#content-->
+<!--#content-->
+  <div class="todo-container">
+    <div class="todo-header">
+      <h1>📝 我的TODO列表</h1>
     </div>
-    <div class="container">
-        <div class="todo-form">
-            <form hx-post="/add" hx-target="#todo-list" hx-swap="innerHTML">
-                <div class="form-group">
-                    <input type="text" name="todo" placeholder="添加新的待办事项..." required>
-                    <button type="submit">添加</button>
-                </div>
-            </form>
-        </div>
-        <header>
-            <h1>我的待办事项</h1>
-        </header>
+    
+    <div class="todo-content">
+      <!-- 添加表单 -->
+      <form 
+        hx-post="/add" 
+        hx-target="#todo-list"
+        hx-swap="innerHTML"
+        hx-ext="json-enc"
+      >
+        <input type="text" name="todo" placeholder="新的任务...">
+        <button>添加</button>
+      </form>
+      
+      <!-- 自动加载todos -->
+      <div 
+        hx-get="/" 
+        hx-trigger="load"
+        hx-target="#todo-list"
+      ></div>
+      
+      <!-- 列表显示 -->
+      <ul id="todo-list" hx-swap-oob="true"></ul>
+    </div>
+  </div>
 
-        <div id="todo-list" class="todo-list">
-            <!-- Todo items will be loaded here -->
-        </div>
-        
-        <div class="stats">
-            <div class="stat-item">
-                <div class="stat-value" id="total-count">0</div>
-                <div class="stat-label">总计</div>
-            </div>
-            <div class="stat-item">
-                <div class="stat-value" id="completed-count">0</div>
-                <div class="stat-label">已完成</div>
-            </div>
-            <div class="stat-item">
-                <div class="stat-value" id="pending-count">0</div>
-                <div class="stat-label">待完成</div>
-            </div>
-        </div>
-    </div>
-</main>
-   <script>
-        // 初始数据
-        //const initialTodos = [
-        //    {"id":2,"todo":"googgogogogogogog","status":false},
-        //    {"id":3,"todo":"你愿望实现了吗","status":true},
-        //    {"id":4,"todo":"你愿望实现了吗","status":true},
-        //    {"id":1,"todo":"今天干这个","status":true}
-        //];
-        htmx.ajax('GET', '/', '#todo-list')
-        .then(() => {
-            console.log('初始数据加载完成');
-        });
-        
-        // 加载todos到localStorage
-        if (!localStorage.getItem('todos')) {
-            localStorage.setItem('todos', JSON.stringify(initialTodos));
+  <script>
+    document.body.addEventListener('htmx:beforeSwap', function(evt) {
+      // 如果是todos列表请求
+      if (evt.detail.xhr.responseURL.includes('/')) {
+        try {
+          const todos = JSON.parse(evt.detail.xhr.responseText);
+          // 生成HTML
+          const html = todos.map(todo => `
+            <li class="todo-item" id="todo-${todo.id}">
+              <input type="checkbox" 
+                id = "${todo.id}"
+                ${todo.status ? 'checked' : ''}
+                hx-put="/todos/${todo.id}"
+                hx-trigger="change"
+                hx-target="#todo-${todo.id}"
+                hx-swap="outerHTML">
+              <label for="${todo.id}"><span class="${todo.status ? 'completed' : ''}">${todo.todo}</span></label>
+            </li>
+          `).join('');
+          
+          evt.detail.target.innerHTML = html || '<li>暂无任务</li>';
+          evt.detail.shouldSwap = false;
+        } catch(e) {
+          console.error(e);
         }
-        
-        // 获取todos
-        function getTodos() {
-            return JSON.parse(localStorage.getItem('todos') || '[]');
-        }
-        
-        // 保存todos
-        function saveTodos(todos) {
-            localStorage.setItem('todos', JSON.stringify(todos));
-            updateStats();
-        }
-        
-        // 更新统计信息
-        function updateStats() {
-            const todos = getTodos();
-            const total = todos.length;
-            const completed = todos.filter(todo => todo.status).length;
-            const pending = total - completed;
-            
-            document.getElementById('total-count').textContent = total;
-            document.getElementById('completed-count').textContent = completed;
-            document.getElementById('pending-count').textContent = pending;
-        }
-        
-        // 渲染单个todo项
-        function renderTodo(todo) {
-            return `
-                <div class="todo-item ${todo.status ? 'completed' : ''}" id="todo-${todo.id}">
-                    <input 
-                        type="checkbox" 
-                        class="todo-checkbox" 
-                        ${todo.status ? 'checked' : ''}
-                        hx-put="/todos/${todo.id}/toggle"
-                        hx-target="#todo-list"
-                        hx-swap="innerHTML"
-                    >
-                    <div class="todo-content">
-                        <div class="todo-text ${todo.status ? 'completed' : ''}">${todo.todo}</div>
-                    </div>
-                </div>
-            `;
-        }
-        
-        // 渲染所有todos
-        function renderTodos() {
-            const todos = getTodos();
-            return todos.map(renderTodo).join('');
-        }
-        
-        // 添加新的todo
-        function addTodo(todoText) {
-            const todos = getTodos();
-            const newId = todos.length > 0 ? Math.max(...todos.map(t => t.id)) + 1 : 1;
-            const newTodo = {
-                id: newId,
-                todo: todoText,
-                status: false
-            };
-            todos.push(newTodo);
-            saveTodos(todos);
-            return renderTodos();
-        }
-        
-        // 切换todo状态
-        function toggleTodo(id) {
-            const todos = getTodos();
-            const todoIndex = todos.findIndex(t => t.id === parseInt(id));
-            if (todoIndex !== -1) {
-                todos[todoIndex].status = !todos[todoIndex].status;
-                saveTodos(todos);
-            }
-            return renderTodos();
-        }
-        
-        // 初始化页面
-        document.addEventListener('DOMContentLoaded', function() {
-            // 设置初始todos
-            document.getElementById('todo-list').innerHTML = renderTodos();
-            updateStats();
-            
-            // 拦截HTMX请求
-            document.body.addEventListener('htmx:beforeRequest', function(evt) {
-                const path = evt.detail.pathInfo.requestPath;
-                
-                if (evt.detail.verb === 'post' && path === '/todos') {
-                    evt.preventDefault();
-                    const formData = new FormData(evt.detail.target);
-                    const todoText = formData.get('todo');
-                    document.getElementById('todo-list').innerHTML = addTodo(todoText);
-                    evt.detail.target.reset();
-                }
-                
-                if (evt.detail.verb === 'put' && path.startsWith('/todos/') && path.endsWith('/toggle')) {
-                    evt.preventDefault();
-                    const id = path.split('/')[2];
-                    document.getElementById('todo-list').innerHTML = toggleTodo(id);
-                }
-            });
-        });
-    </script>
+      }
+    });
+  </script>
 </body>
 </html>
 

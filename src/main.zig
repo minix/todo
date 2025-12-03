@@ -1,12 +1,12 @@
 const std = @import("std");
 const json = std.json;
-const log = std.log.scoped(.@"zzz/http/server");
+const posix = std.posix;
+const Io = std.Io;
+const log = std.log;
 
 const zzz = @import("zzz");
 const http = zzz.HTTP;
 const template = zzz.template;
-
-const Io = std.Io;
 
 const Server = http.Server;
 const Router = http.Router;
@@ -20,7 +20,7 @@ const Compression = http.Middlewares.Compression;
 
 const todo_json_file: []const u8 = "todo.json";
 const init_str: []const u8 = 
-\\ [{"id": 1, "todo": "开始你的todo之旅", "status": true}]
+\\ [{"id": 1, "todo": "开始你的todo之旅", "status": true, "startts:": "1764724381", "endts": 1764724381}]
 ;
 
 const TodoList = struct {
@@ -32,26 +32,21 @@ const TodoList = struct {
 		return TodoList {
 			.id = id,
 			.todo = todo,
-			.status = status
+			.status = status,
 		};
 	}
 };
 
 fn base_handler(ctx: *const Context, _: void) !Respond {
-    log.info("{s}", .{"hahah"});
-    
     var todo_list = try read_json(ctx.io, ctx.allocator, todo_json_file);
     
-    log.info("todo list content: {s}", .{todo_list});
-    
     if (todo_list.len == 0) {
-        _ = try write_file(todo_json_file, init_str);
+        _ = try write_init(todo_json_file, init_str);
         todo_list = try read_json(ctx.io, ctx.allocator, todo_json_file);
     }
-    log.info("Type: {any}", .{@TypeOf(todo_list)});
-    log.info("todo list content: {s}", .{todo_list});
+
     const parsed = try json.parseFromSlice([]TodoList, ctx.allocator, todo_list,  .{});
-    log.info("parse json: {any}", .{parsed});
+
     defer parsed.deinit();
     
     const render = try json.Stringify.valueAlloc(ctx.allocator, parsed.value, .{});
@@ -75,7 +70,7 @@ fn td(ctx: *const Context, _: void) !Respond {
     );
 
     const todo_list = try read_json(ctx.io, ctx.allocator, todo_json_file);
-    if (todo_list.len == 0) try write_file(todo_json_file, init_str);
+    if (todo_list.len == 0) try write_init(todo_json_file, init_str);
     const parsed_todo = try json.parseFromSlice([]TodoList, ctx.allocator, todo_list, .{});
     defer parsed_todo.deinit();
 
@@ -95,7 +90,8 @@ fn add_task(ctx: *const Context, _: void) !Respond {
     };
     
     const todo_list = try read_json(ctx.io, ctx.allocator, todo_json_file);
-    if (todo_list.len == 0) try write_file(todo_json_file, init_str);
+    if (todo_list.len == 0) try write_init(todo_json_file, init_str);
+    
     const body = try write_json(todo_json_file, ctx.allocator, todo_list, info);
 
     return ctx.response.apply(.{
@@ -113,7 +109,7 @@ fn change_task_status(ctx: *const Context, _: void) !Respond {
     };
     
     const todo_list = try read_json(ctx.io, ctx.allocator, todo_json_file);
-    if (todo_list.len == 0) try write_file(todo_json_file, todo_list);
+    if (todo_list.len == 0) try write_init(todo_json_file, todo_list);
     
     var list = std.array_list.Managed(TodoList).init(ctx.allocator);
     defer list.deinit();
@@ -128,27 +124,24 @@ fn change_task_status(ctx: *const Context, _: void) !Respond {
     for (list_items, 0..) |item, i| {
         if (item.id == info.id) {
             const completed_task: TodoList = .{
-    		.id = item.id,
-    		.status = true,
-    		.todo = item.todo,
+    		    .id = item.id,
+    		    .status = true,
+    		    .todo = item.todo,
     	    };
     	    _ = list.orderedRemove(i);
     	    try list.append(completed_task);
+    	} else {
+    	    return ctx.response.apply(.{
+    	        .status = .Forbidden,
+    	        .mime = http.Mime.JSON,
+    	        .body = "Not found the task. "
+    	    });
     	}
     }
-	
-    const new_js = try std.fs.cwd().createFile(todo_json_file, .{ .truncate = true });
-    defer new_js.close();
 
     const render = try json.Stringify.valueAlloc(ctx.allocator, list_items, .{});
     defer ctx.allocator.free(render);
-
-    var write_buffer: [1024]u8 = undefined;
-    var wtr = new_js.writer(&write_buffer);
-
-    const writer_interface: *std.Io.Writer = &wtr.interface;
-    try writer_interface.writeAll(render);
-    try writer_interface.flush();
+    try write_init(todo_json_file, render);
 	
     return ctx.response.apply(.{
         .status = .OK,
@@ -175,20 +168,6 @@ fn read_json(gg: std.Io, allocator: std.mem.Allocator, file_path: []const u8) ![
     return content;
 }
 
-fn write_file(file_path: []const u8, write_str: []const u8) !void {
-
-//    const init_js: []const u8 = "[{"id": 1, "todo": "开始你的todo之旅", "status": true}]";
-    const new_js = try std.fs.cwd().createFile(file_path, .{ .truncate = true });
-    defer new_js.close();
-    
-    var write_buffer: [1024]u8 = undefined;
-    var wtr = new_js.writer(&write_buffer);
-
-    const writer_interface: *std.Io.Writer = &wtr.interface;
-    _ = try writer_interface.writeAll(write_str);
-    _ = try writer_interface.flush();
-}
-
 fn write_json(file_path: []const u8, allocator: std.mem.Allocator, json_content: []u8, form_data: TodoList) ![]u8 {
 
     var list = std.array_list.Managed(TodoList).init(allocator);
@@ -206,7 +185,7 @@ fn write_json(file_path: []const u8, allocator: std.mem.Allocator, json_content:
     
     const render = try json.Stringify.valueAlloc(allocator, list.items, .{});
     
-    _ = try write_file(file_path, render);
+    _ = try write_init(file_path, render);
     
     return render;
 }
