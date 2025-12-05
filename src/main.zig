@@ -20,7 +20,7 @@ const Compression = http.Middlewares.Compression;
 
 const todo_json_file: []const u8 = "todo.json";
 const init_str: []const u8 = 
-\\ [{"id": 1, "todo": "开始你的todo之旅", "status": true, "startts:": "1764724381", "endts": 1764724381}]
+    \\[{"id": 1, "todo": "开始你的todo之旅", "status": true}]
 ;
 
 const TaskId = struct {
@@ -94,8 +94,6 @@ fn add_task(ctx: *const Context, _: void) !Respond {
         else => return error.UnexpectedMethod,
     };
     
-    log.info("info value: {any}", .{info});
-    
     const todo_list = try read_json(ctx.io, ctx.allocator, todo_json_file);
     if (todo_list.len == 0) try write_init(todo_json_file, init_str);
     
@@ -110,7 +108,7 @@ fn add_task(ctx: *const Context, _: void) !Respond {
 
     const element_id: usize = parsed_value.len;
     const append_ele = TodoList.init(element_id + 1, info, false);
-    try list.append(append_ele);
+    try list.insert(0, append_ele);
     
     const render = try json.Stringify.valueAlloc(ctx.allocator, list.items, .{});
     
@@ -136,19 +134,20 @@ fn change_task_status(ctx: *const Context, _: void) !Respond {
     var list = std.array_list.Managed(TodoList).init(ctx.allocator);
     defer list.deinit();
     
-    const parsed = try json.parseFromSlice([]TodoList, ctx.allocator, todo_list, .{});
+    const parsed = json.parseFromSlice([]TodoList, ctx.allocator, todo_list, .{}) catch unreachable;
     defer parsed.deinit();
-    try list.appendSlice(parsed.value);
+    try list.insertSlice(0, parsed.value);
 	
     const list_items = list.items;
-    var buf: [20]u8 = undefined;
     
     for (list_items, 0..) |item, i| {
         // TodoList结构中的id为usize,将其转为[]u8
-        const str = std.fmt.bufPrint(&buf, "{}", .{item.id}) catch unreachable;
+        const origin_id: usize = item.id;
+        const str = std.fmt.allocPrint(ctx.allocator, "{}", .{item.id}) catch unreachable;
+        ctx.allocator.free(str);
         if (std.mem.eql(u8, str, task_id)) {
             const completed_task: TodoList = .{
-    		    .id = item.id,
+    		    .id = origin_id,
     		    .status = true,
     		    .todo = item.todo,
     	    };
@@ -157,7 +156,7 @@ fn change_task_status(ctx: *const Context, _: void) !Respond {
     	    break;
     	}
     }
-
+    log.info("list items: {any}", .{list_items});
     const render = try json.Stringify.valueAlloc(ctx.allocator, list_items, .{});
     defer ctx.allocator.free(render);
     try write_init(todo_json_file, render);
@@ -193,7 +192,7 @@ fn write_init(file_path: []const u8, str: []const u8) !void {
     var write_buffer: [1024]u8 = undefined;
     var wtr = file.writer(&write_buffer);
     const write_interface: *std.Io.Writer = &wtr.interface;
-    try write_interface.writeAll(str);
+    write_interface.writeAll(str) catch unreachable;
     _ = try write_interface.flush();
 }
 

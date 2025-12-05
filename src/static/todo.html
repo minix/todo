@@ -573,8 +573,8 @@
                     
                     // 尝试解析 JSON，如果响应是空的（如 DELETE），则返回 null
                     const text = await response.text();
+                    console.log("hahaha" + text);
                     if (!text) return { success: true, data: null };
-                    
                     return { success: true, data: JSON.parse(text) };
                 } catch (error) {
                     console.error('API 请求失败:', error);
