@@ -44,3 +44,42 @@
 main {
     min-width: 50em;
 }
+
+.todo-checkbox {
+  width: 24px;
+  height: 24px;
+  cursor: pointer;
+  accent-color: #667eea;
+  transition: all 0.3s;
+}
+
+.todo-checkbox.processing {
+  cursor: wait;
+  opacity: 0.7;
+}
+
+.todo-checkbox:checked,
+.todo-checkbox.completed {
+  accent-color: #28a745;
+}
+
+.todo-checkbox:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+  accent-color: #6c757d;
+}
+
+/* 整个任务项的状态 */
+.todo-item.processing {
+  opacity: 0.7;
+}
+
+.todo-item.completed {
+  background-color: #f8f9fa;
+  border-color: #e9ecef;
+}
+
+.todo-text.completed {
+  text-decoration: line-through;
+  color: #6c757d;
+}

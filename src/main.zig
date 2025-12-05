@@ -23,6 +23,10 @@ const init_str: []const u8 =
 \\ [{"id": 1, "todo": "开始你的todo之旅", "status": true, "startts:": "1764724381", "endts": 1764724381}]
 ;
 
+const TaskId = struct {
+    id: usize = 0,
+};
+
 const TodoList = struct {
     id: usize = 0,
     todo: []const u8,
@@ -84,10 +88,13 @@ fn td(ctx: *const Context, _: void) !Respond {
 }
 
 fn add_task(ctx: *const Context, _: void) !Respond {
+    log.info("body: {any}", .{ctx.request.body.?});
     const info = switch (ctx.request.method.?) {
-        .POST => try Form(TodoList).parse(ctx.allocator, ctx),
+        .POST => ctx.request.body.?,
         else => return error.UnexpectedMethod,
     };
+    
+    log.info("info value: {any}", .{info});
     
     const todo_list = try read_json(ctx.io, ctx.allocator, todo_json_file);
     if (todo_list.len == 0) try write_init(todo_json_file, init_str);
@@ -102,7 +109,7 @@ fn add_task(ctx: *const Context, _: void) !Respond {
     try list.appendSlice(parsed_value);
 
     const element_id: usize = parsed_value.len;
-    const append_ele = TodoList.init(element_id + 1, info.todo, info.status);
+    const append_ele = TodoList.init(element_id + 1, info, false);
     try list.append(append_ele);
     
     const render = try json.Stringify.valueAlloc(ctx.allocator, list.items, .{});
@@ -117,8 +124,9 @@ fn add_task(ctx: *const Context, _: void) !Respond {
 }
 
 fn change_task_status(ctx: *const Context, _: void) !Respond {
-    const info = switch (ctx.request.method.?) {
-        .POST => try Form(TodoList).parse(ctx.allocator, ctx),
+    log.info("post data is: {any}", .{ctx.request});
+    const task_id = switch (ctx.request.method.?) {
+        .PUT, .POST => ctx.request.body.?,
         else => return error.UnexpectedMethod,
     };
     
@@ -133,9 +141,12 @@ fn change_task_status(ctx: *const Context, _: void) !Respond {
     try list.appendSlice(parsed.value);
 	
     const list_items = list.items;
+    var buf: [20]u8 = undefined;
     
     for (list_items, 0..) |item, i| {
-        if (item.id == info.id) {
+        // TodoList结构中的id为usize,将其转为[]u8
+        const str = std.fmt.bufPrint(&buf, "{}", .{item.id}) catch unreachable;
+        if (std.mem.eql(u8, str, task_id)) {
             const completed_task: TodoList = .{
     		    .id = item.id,
     		    .status = true,
@@ -143,12 +154,7 @@ fn change_task_status(ctx: *const Context, _: void) !Respond {
     	    };
     	    _ = list.orderedRemove(i);
     	    try list.append(completed_task);
-    	} else {
-    	    return ctx.response.apply(.{
-    	        .status = .Forbidden,
-    	        .mime = http.Mime.JSON,
-    	        .body = "Not found the task. "
-    	    });
+    	    break;
     	}
     }
 
@@ -222,7 +228,7 @@ pub fn main() !void {
         Route.init("/").get({}, base_handler).layer(),
         Route.init("/todo").get({}, td).layer(),
         Route.init("/add").post({}, add_task).layer(),
-        Route.init("/change").post({}, change_task_status).layer(),
+        Route.init("/change").put({}, change_task_status).layer(),
         FsDir.serve("/", &static_dir),
     }, .{});
     defer router.deinit(allocator);
