@@ -3,458 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="/css/main.css" crossorigin="">
     <title>待办事项 - 后端接口版</title>
     <style>
-        :root {
-            --primary-color: #4361ee;
-            --secondary-color: #3a56d4;
-            --success-color: #4cc9f0;
-            --danger-color: #f72585;
-            --warning-color: #f8961e;
-            --light-color: #f8f9fa;
-            --dark-color: #212529;
-            --border-radius: 10px;
-            --box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
-            --transition: all 0.3s ease;
-        }
-        
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-        
-        body {
-            font-family: 'PingFang SC', 'Microsoft YaHei', sans-serif;
-            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
-            min-height: 100vh;
-            padding: 20px;
-            color: #333;
-        }
-        
-        .container {
-            max-width: 900px;
-            margin: 0 auto;
-            animation: fadeIn 0.5s ease-out;
-        }
-        
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(20px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-        
-        header {
-            text-align: center;
-            margin-bottom: 40px;
-            padding-top: 20px;
-        }
-        
-        .app-title {
-            font-size: 2.8rem;
-            font-weight: 700;
-            background: linear-gradient(to right, var(--primary-color), var(--success-color));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-            margin-bottom: 10px;
-            letter-spacing: -0.5px;
-        }
-        
-        .app-subtitle {
-            color: #666;
-            font-size: 1.1rem;
-            font-weight: 300;
-        }
-        
-        .main-content {
-            background-color: white;
-            border-radius: var(--border-radius);
-            box-shadow: var(--box-shadow);
-            overflow: hidden;
-            margin-bottom: 30px;
-        }
-        
-        .todo-form {
-            padding: 30px;
-            background-color: var(--light-color);
-            border-bottom: 1px solid rgba(0, 0, 0, 0.05);
-        }
-        
-        .form-title {
-            font-size: 1.4rem;
-            margin-bottom: 20px;
-            color: var(--dark-color);
-            font-weight: 600;
-        }
-        
-        .form-group {
-            display: flex;
-            gap: 15px;
-        }
-        
-        .todo-input {
-            flex: 1;
-            padding: 16px 20px;
-            border: 2px solid #e9ecef;
-            border-radius: var(--border-radius);
-            font-size: 1.1rem;
-            transition: var(--transition);
-        }
-        
-        .todo-input:focus {
-            outline: none;
-            border-color: var(--primary-color);
-            box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.1);
-        }
-        
-        .add-btn {
-            background-color: var(--primary-color);
-            color: white;
-            border: none;
-            padding: 0 35px;
-            border-radius: var(--border-radius);
-            font-size: 1.1rem;
-            font-weight: 600;
-            cursor: pointer;
-            transition: var(--transition);
-            letter-spacing: 0.5px;
-        }
-        
-        .add-btn:hover {
-            background-color: var(--secondary-color);
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(67, 97, 238, 0.2);
-        }
-        
-        .api-config {
-            padding: 20px 30px;
-            background-color: #f8fafc;
-            border-bottom: 1px solid rgba(0, 0, 0, 0.05);
-        }
-        
-        .config-title {
-            font-size: 1.2rem;
-            margin-bottom: 15px;
-            color: var(--dark-color);
-            font-weight: 600;
-        }
-        
-        .api-url-input {
-            width: 100%;
-            padding: 12px 15px;
-            border: 2px solid #e9ecef;
-            border-radius: var(--border-radius);
-            font-size: 1rem;
-            transition: var(--transition);
-            font-family: monospace;
-        }
-        
-        .api-url-input:focus {
-            outline: none;
-            border-color: var(--primary-color);
-            box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.1);
-        }
-        
-        .todo-stats {
-            display: flex;
-            justify-content: space-between;
-            padding: 25px 30px;
-            background-color: #f8fafc;
-            border-bottom: 1px solid rgba(0, 0, 0, 0.05);
-        }
-        
-        .stat-item {
-            text-align: center;
-        }
-        
-        .stat-value {
-            font-size: 2rem;
-            font-weight: 700;
-            color: var(--primary-color);
-            line-height: 1;
-        }
-        
-        .stat-label {
-            font-size: 0.9rem;
-            color: #6c757d;
-            margin-top: 5px;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-        
-        .todo-list-container {
-            padding: 10px;
-            max-height: 500px;
-            overflow-y: auto;
-        }
-        
-        .todo-list {
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-        }
-        
-        .todo-item {
-            background-color: white;
-            border-radius: var(--border-radius);
-            padding: 20px;
-            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.04);
-            display: flex;
-            align-items: center;
-            gap: 20px;
-            transition: var(--transition);
-            border-left: 5px solid transparent;
-        }
-        
-        .todo-item:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
-        }
-        
-        .todo-item.completed {
-            background-color: #f8f9fa;
-            border-left-color: var(--success-color);
-        }
-        
-        .todo-item.completed .todo-text {
-            text-decoration: line-through;
-            color: #8a94a6;
-        }
-        
-        .todo-checkbox-container {
-            position: relative;
-            width: 26px;
-            height: 26px;
-        }
-        
-        .todo-checkbox {
-            width: 100%;
-            height: 100%;
-            cursor: pointer;
-            opacity: 0;
-            position: absolute;
-            z-index: 2;
-        }
-        
-        .custom-checkbox {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 26px;
-            height: 26px;
-            border: 2px solid #dee2e6;
-            border-radius: 6px;
-            background-color: white;
-            transition: var(--transition);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        
-        .todo-checkbox:checked ~ .custom-checkbox {
-            background-color: var(--success-color);
-            border-color: var(--success-color);
-        }
-        
-        .todo-checkbox:checked ~ .custom-checkbox::after {
-            content: '✓';
-            color: white;
-            font-weight: bold;
-            font-size: 14px;
-        }
-        
-        .todo-content {
-            flex: 1;
-        }
-        
-        .todo-text {
-            font-size: 1.2rem;
-            font-weight: 500;
-            margin-bottom: 5px;
-            color: var(--dark-color);
-            word-break: break-word;
-        }
-        
-        .todo-meta {
-            display: flex;
-            align-items: center;
-            gap: 15px;
-        }
-        
-        .todo-id {
-            font-size: 0.85rem;
-            color: #8a94a6;
-            background-color: #f1f3f5;
-            padding: 3px 10px;
-            border-radius: 20px;
-            font-weight: 500;
-        }
-        
-        .todo-status {
-            font-size: 0.85rem;
-            color: #8a94a6;
-            font-weight: 500;
-        }
-        
-        .todo-status.completed {
-            color: var(--success-color);
-        }
-        
-        .todo-status.pending {
-            color: var(--warning-color);
-        }
-        
-        .todo-actions {
-            display: flex;
-            gap: 10px;
-        }
-        
-        .todo-btn {
-            background: none;
-            border: none;
-            width: 40px;
-            height: 40px;
-            border-radius: 8px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            transition: var(--transition);
-            color: #8a94a6;
-        }
-        
-        .todo-btn:hover {
-            background-color: #f8f9fa;
-            color: var(--dark-color);
-        }
-        
-        .loading-state {
-            text-align: center;
-            padding: 60px 20px;
-            color: #8a94a6;
-        }
-        
-        .loading-icon {
-            font-size: 4rem;
-            margin-bottom: 20px;
-            opacity: 0.5;
-            animation: spin 2s linear infinite;
-        }
-        
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-        
-        .loading-title {
-            font-size: 1.5rem;
-            margin-bottom: 10px;
-            color: #6c757d;
-        }
-        
-        .empty-state {
-            text-align: center;
-            padding: 60px 20px;
-            color: #8a94a6;
-        }
-        
-        .empty-icon {
-            font-size: 4rem;
-            margin-bottom: 20px;
-            opacity: 0.5;
-        }
-        
-        .empty-title {
-            font-size: 1.5rem;
-            margin-bottom: 10px;
-            color: #6c757d;
-        }
-        
-        .error-state {
-            text-align: center;
-            padding: 60px 20px;
-            color: var(--danger-color);
-            background-color: rgba(247, 37, 133, 0.1);
-            border-radius: var(--border-radius);
-            margin: 20px;
-        }
-        
-        .error-icon {
-            font-size: 4rem;
-            margin-bottom: 20px;
-            opacity: 0.8;
-        }
-        
-        .error-title {
-            font-size: 1.5rem;
-            margin-bottom: 10px;
-            color: var(--danger-color);
-        }
-        
-        .error-description {
-            font-size: 1rem;
-            max-width: 400px;
-            margin: 0 auto;
-            line-height: 1.6;
-            color: #666;
-        }
-        
-        .footer {
-            text-align: center;
-            color: #8a94a6;
-            font-size: 0.9rem;
-            padding: 20px;
-        }
-        
-        .notification {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            padding: 15px 20px;
-            border-radius: 8px;
-            color: white;
-            font-weight: 500;
-            z-index: 1000;
-            opacity: 0;
-            transform: translateX(100px);
-            transition: all 0.3s ease;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
-            max-width: 300px;
-        }
-        
-        @media (max-width: 768px) {
-            .app-title {
-                font-size: 2.2rem;
-            }
-            
-            .todo-form {
-                padding: 20px;
-            }
-            
-            .form-group {
-                flex-direction: column;
-            }
-            
-            .add-btn {
-                width: 100%;
-                padding: 16px;
-            }
-            
-            .todo-stats {
-                flex-direction: column;
-                gap: 20px;
-            }
-            
-            .todo-item {
-                flex-direction: column;
-                align-items: flex-start;
-                gap: 15px;
-            }
-            
-            .todo-actions {
-                align-self: flex-end;
-            }
-        }
+ 
     </style>
 </head>
 <body>    
@@ -466,10 +18,9 @@
         
         <main class="main-content">
             <div class="todo-form">
-                <h2 class="form-title">添加新任务</h2>
                 <div class="form-group">
                     <input type="text" class="todo-input" id="todo-input" placeholder="输入新的待办事项...">
-                    <button class="add-btn" id="add-btn">添加任务</button>
+                    <button class="add-btn" id="add-btn">添加</button>
                 </div>
             </div>
             
@@ -479,13 +30,14 @@
                     <div class="stat-label">总任务数</div>
                 </div>
                 <div class="stat-item">
-                    <div class="stat-value" id="completed-count">0</div>
-                    <div class="stat-label">已完成</div>
-                </div>
-                <div class="stat-item">
                     <div class="stat-value" id="pending-count">0</div>
                     <div class="stat-label">待完成</div>
                 </div>
+                <div class="stat-item">
+                    <div class="stat-value" id="completed-count">0</div>
+                    <div class="stat-label">已完成</div>
+                </div>
+
             </div>
             
             <div class="todo-list-container">
@@ -681,14 +233,9 @@
                 <div class="todo-item ${todo.status ? 'completed' : ''}" data-id="${todo.id}">
                     <div class="todo-checkbox-container">
                         <input type="checkbox" class="todo-checkbox" id="checkbox-${todo.id}" ${todo.status ? 'checked' : ''}>
-                        <div class="custom-checkbox"></div>
-                    </div>
-                    <div class="todo-content">
-                        <div class="todo-text">${todo.todo}</div>
-                        <div class="todo-meta">
-                            <span class="todo-id">ID: ${todo.id}</span>
-                            <span class="todo-status ${statusClass}">${statusText}</span>
-                        </div>
+                        <label for="checkbox-${todo.id}" class="todo-text">${todo.todo}</label>
+                        <br />
+                        <span class="todo-status ${statusClass}">${statusText}</span>
                     </div>
                 </div>
             `;
@@ -775,7 +322,7 @@
                 success: '#4cc9f0',
                 danger: '#f72585',
                 warning: '#f8961e',
-                info: '#4361ee'
+                info: '#007ACC'
             };
             
             notification.style.backgroundColor = colors[type] || colors.info;
